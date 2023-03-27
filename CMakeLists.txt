@@ -1,16 +1,21 @@
-PROJECT(yasm)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
-if (COMMAND cmake_policy)
-    cmake_policy(SET CMP0003 NEW)
-endif (COMMAND cmake_policy)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.16)
+
+
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
+INCLUDE(VersionGen)
+
+set(version_file "${CMAKE_BINARY_DIR}/YASM-VERSION-FILE")
+VERSION_GEN(PACKAGE_VERSION ${version_file} "1.3.0")
+
+string (REGEX MATCH "([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)" _ ${PACKAGE_VERSION})
+
+PROJECT(yasm VERSION 1.3.0)
 
 OPTION(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 # Where to look first for cmake modules
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 INCLUDE(YasmMacros)
-INCLUDE(VersionGen)
 
 OPTION(ENABLE_NLS "Enable message translations" OFF)
 
@@ -27,7 +32,6 @@ IF(NOT CMAKE_BUILD_TYPE)
       FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
-VERSION_GEN(PACKAGE_VERSION "${CMAKE_BINARY_DIR}/YASM-VERSION-FILE" "1.3.0")
 
 set (PACKAGE_STRING "yasm ${PACKAGE_VERSION}")
 
@@ -39,6 +43,48 @@ ADD_SUBDIRECTORY(tools)
 ADD_SUBDIRECTORY(libyasm)
 ADD_SUBDIRECTORY(modules)
 ADD_SUBDIRECTORY(frontends)
+
+
+set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(config_install_dir "lib/cmake/${PROJECT_NAME}")
+set(include_install_dir "include")
+
+set(version_config "${generated_dir}/${PROJECT_NAME}ConfigVersion.cmake")
+set(project_config "${generated_dir}/${PROJECT_NAME}Config.cmake")
+set(targets_export_name "${PROJECT_NAME}Targets")
+set(namespace "${PROJECT_NAME}::")
+
+set (TOOLS
+    ytasm
+    vsyasm
+    yasm)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    "${version_config}" COMPATIBILITY SameMajorVersion
+)
+
+configure_file("Config.cmake.in" "${project_config}" @ONLY)
+
+install(
+    TARGETS ${TOOLS}
+    EXPORT "${targets_export_name}"
+    LIBRARY DESTINATION "lib"
+    ARCHIVE DESTINATION "lib"
+    RUNTIME DESTINATION "bin"
+    INCLUDES DESTINATION "${include_install_dir}"
+)
+
+install(
+    FILES "${project_config}" "${version_config}"
+    DESTINATION "${config_install_dir}"
+)
+
+install(
+    EXPORT "${targets_export_name}"
+    NAMESPACE "${namespace}"
+    DESTINATION "${config_install_dir}"
+)
 
 INSTALL(FILES
     libyasm.h
